@@ -1,0 +1,107 @@
+# Reproducible Research: Peer Assessment 1
+
+## 1. Loading and preprocessing the data
+The code below reads the source file into memory then creates a copy with NA values removed.
+
+
+```r
+# Read source file
+data <- read.csv("activity.csv")
+
+# Remote NAs values
+cleaned_data <- na.omit(data)
+```
+
+## 2. What is mean total number of steps taken per day?
+The code below calculates the total number of steps taken per day and plots a histogram displaying the frequency of steps across the intervals of the day.  
+
+
+
+```r
+# Calculate the total number of steps per day
+total <- summarise(group_by(cleaned_data, date), total_steps = sum(steps))
+
+# Calculate mean of total steps per day 
+mean <- mean(total$total_steps)
+
+# Calculate median of total steps per day
+median <- median(total$total_steps)
+
+# Plot histogram of total steps per day.
+with(total, hist(total_steps, main = "Histogram of Total Steps per Day", xlab = "Total Steps per Day", col = "light green"))
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-3-1.png) 
+
+The mean of the total steps per day 1.0766189\times 10^{4} and the median of the total steps per day 10765 are also calculated.
+
+## 3. What is the average daily activity pattern?
+The code below calculates the average number of steps per day and plots this using a line graph.  
+
+
+```r
+# Calculate the average number of steps per day.
+mean <- summarise(group_by(cleaned_data, interval), average_steps = mean(steps))
+
+# Return the highest average interval by ordering average time and extracting the interval - 08:35
+highest <- paste("0", head(mean[order(mean$average_steps, decreasing = TRUE),], 1)$interval, sep="")
+
+with(mean, plot(interval, average_steps, type = "l", col="green", main = "Average Daily Activity Pattern", xlab = "Hours of the Day", ylab = "Average steps across all days"))
+axis(side=1, at=seq(0, 2355, by=500))
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-4-1.png) 
+
+The interval with the highest number of steps - 0835 - is also calculated.
+
+## 4. Imputing missing values
+
+The code below fills in the missing values in the original dataset by populating the average number of steps per day, rounded to the nearest whole step.
+
+
+```r
+# Count the number of rows with NA values in them
+na <- sum(!complete.cases(data))
+
+# Replace any NA values with the mean value for that interval, rounded to the nearest step.
+new_data <- data
+for(i in 1:nrow(data)) {
+  if(is.na(data[i,]$steps)){ 
+    new_data[i,]$steps <- as.integer(round(subset(mean, select = c(average_steps), interval == data[i,]$interval), digits = 0) )}
+}
+
+# Calculate the total number of steps per day
+total <- summarise(group_by(new_data, date), total_steps = sum(steps))
+
+# Calculate mean of total steps per day
+mean <- mean(total$total_steps)
+
+# Calculate median of total steps per day
+median <- median(total$total_steps)
+
+# Plot histogram of total steps per day.
+with(total, hist(total_steps, main = "Histogram of Total Imputed Steps per Day", xlab = "Total Imputed Steps per Day", col = "light green"))
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-5-1.png) 
+
+The mean of the total steps per day 1.0765639\times 10^{4} and the median of the total steps per day 10762 are also calculated.  It can be observed that both the mean and the median have slightly decreased in comparison to the mean and median values from the copy of the source dataset with NA values removed.
+
+## 5. Are there differences in activity patterns between weekdays and weekends?
+The code below creates two factors for the weekend and weekday and two line graphs are created plotting the average number of steps across weekdays and weekends for each interval.
+
+
+
+
+```r
+# Calculate the type of day.
+days <- new_data
+days$day_type <- ifelse(weekdays(as.Date(new_data$date)) == "Sunday", "Weekend", ifelse(weekdays(as.Date(new_data$date)) == "Saturday", "Weekend", "Weekday"))
+
+# Calculate the total number of imputed steps per day.
+mean <- summarise(group_by(days, interval, day_type), mean_steps = mean(steps))
+
+xyplot(mean$mean_steps ~ mean$interval | mean$day_type, mean, col="green", layout = c(1, 2), type = "l", xlab = "Interval", ylab = "Steps", par.settings = list(strip.background=list(col="lightgrey")))
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-7-1.png) 
